@@ -605,6 +605,16 @@ protected:
   Tool *buildLinker() const override;
 };
 
+class LLVM_LIBRARY_VISIBILITY BareMetal : public Generic_ELF {
+public:
+  BareMetal(const Driver &D, const llvm::Triple &Triple,
+        const llvm::opt::ArgList &Args);
+
+protected:
+  Tool *buildAssembler() const override;
+  Tool *buildLinker() const override;
+};
+
 class LLVM_LIBRARY_VISIBILITY Minix : public Generic_ELF {
 public:
   Minix(const Driver &D, const llvm::Triple &Triple,

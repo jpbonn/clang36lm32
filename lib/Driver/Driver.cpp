@@ -2069,6 +2069,10 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
       }
       break;
     default:
+      // BareMetal 'ELF' toolchain that runs as and ld directly
+      if (Target.getArch() == llvm::Triple::ELF) {
+        TC = new toolchains::BareMetal(*this, Target, Args);
+        break;
       // TCE is an OSless target
       if (Target.getArchName() == "tce") {
         TC = new toolchains::TCEToolChain(*this, Target, Args);

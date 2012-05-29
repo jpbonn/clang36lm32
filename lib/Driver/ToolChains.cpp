@@ -2631,6 +2631,22 @@ void NetBSD::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
   }
 }
 
+/// BareMetal - BareMetal tool chain which can call as(1) and ld(1) directly.
+
+BareMetal::BareMetal(const Driver &D, const llvm::Triple& Triple, const ArgList &Args)
+  : Generic_ELF(D, Triple, Args) {
+  getFilePaths().push_back(getDriver().Dir + "/../lib");
+  getFilePaths().push_back("/usr/lib");
+}
+
+Tool *BareMetal::buildAssembler() const {
+  return new tools::baremetal::Assemble(*this);
+}
+
+Tool *BareMetal::buildLinker() const {
+  return new tools::baremetal::Link(*this);
+}
+
 /// Minix - Minix tool chain which can call as(1) and ld(1) directly.
 
 Minix::Minix(const Driver &D, const llvm::Triple& Triple, const ArgList &Args)
