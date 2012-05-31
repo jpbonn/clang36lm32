@@ -5545,14 +5545,14 @@ void MSP430TargetCodeGenInfo::SetTargetAttributes(const Decl *D,
 }
 
 //===----------------------------------------------------------------------===//
-// Mico32 ABI Implementation
+// LM32 ABI Implementation
 //===----------------------------------------------------------------------===//
 
 namespace {
 
-class Mico32ABIInfo : public ABIInfo {
+class LM32ABIInfo : public ABIInfo {
 public:
-  Mico32ABIInfo(CodeGenTypes &CGT) : ABIInfo(CGT) {}
+  LM32ABIInfo(CodeGenTypes &CGT) : ABIInfo(CGT) {}
 
   bool isPromotableIntegerType(QualType Ty) const;
 
@@ -5563,10 +5563,10 @@ public:
                                  CodeGenFunction &CGF) const;
 };
 
-class Mico32TargetCodeGenInfo : public TargetCodeGenInfo {
+class LM32TargetCodeGenInfo : public TargetCodeGenInfo {
 public:
-  Mico32TargetCodeGenInfo(CodeGenTypes &CGT)
-    : TargetCodeGenInfo(new Mico32ABIInfo(CGT)) {}
+  LM32TargetCodeGenInfo(CodeGenTypes &CGT)
+    : TargetCodeGenInfo(new LM32ABIInfo(CGT)) {}
   void SetTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &M) const override;
 };
@@ -5574,7 +5574,7 @@ public:
 }
 
 // Copied from MBlaze
-bool Mico32ABIInfo::isPromotableIntegerType(QualType Ty) const {
+bool LM32ABIInfo::isPromotableIntegerType(QualType Ty) const {
   // Extend all 8 and 16 bit quantities.
   if (const BuiltinType *BT = Ty->getAs<BuiltinType>())
     switch (BT->getKind()) {
@@ -5592,7 +5592,7 @@ bool Mico32ABIInfo::isPromotableIntegerType(QualType Ty) const {
   return false;
 }
 
-void Mico32ABIInfo::computeInfo(CGFunctionInfo &FI) const {
+void LM32ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
   for (CGFunctionInfo::arg_iterator it = FI.arg_begin(), ie = FI.arg_end();
        it != ie; ++it)
@@ -5600,7 +5600,7 @@ void Mico32ABIInfo::computeInfo(CGFunctionInfo &FI) const {
 }
 
 // Copied from MIPS
-ABIArgInfo Mico32ABIInfo::classifyArgumentType(QualType Ty) const {
+ABIArgInfo LM32ABIInfo::classifyArgumentType(QualType Ty) const {
   if (isAggregateTypeForABI(Ty)) {
     // Ignore empty aggregates.
     if (getContext().getTypeSize(Ty) == 0)
@@ -5623,7 +5623,7 @@ ABIArgInfo Mico32ABIInfo::classifyArgumentType(QualType Ty) const {
 }
 
 // Copied from MIPS
-ABIArgInfo Mico32ABIInfo::classifyReturnType(QualType RetTy) const {
+ABIArgInfo LM32ABIInfo::classifyReturnType(QualType RetTy) const {
   if (RetTy->isVoidType())
     return ABIArgInfo::getIgnore();
 
@@ -5641,12 +5641,12 @@ ABIArgInfo Mico32ABIInfo::classifyReturnType(QualType RetTy) const {
 }
 
 
-void Mico32TargetCodeGenInfo::SetTargetAttributes(const Decl *D,
+void LM32TargetCodeGenInfo::SetTargetAttributes(const Decl *D,
                                                   llvm::GlobalValue *GV,
                                              CodeGen::CodeGenModule &M) const {
 }
 
-llvm::Value *Mico32ABIInfo::EmitVAArg(llvm::Value *VAListAddr, QualType Ty,
+llvm::Value *LM32ABIInfo::EmitVAArg(llvm::Value *VAListAddr, QualType Ty,
                                    CodeGenFunction &CFG) const {
   return 0;
 }
@@ -7254,8 +7254,8 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
   case llvm::Triple::nvptx64:
     return *(TheTargetCodeGenInfo = new NVPTXTargetCodeGenInfo(Types));
 
-  case llvm::Triple::mico32:
-    return *(TheTargetCodeGenInfo = new Mico32TargetCodeGenInfo(Types));
+  case llvm::Triple::lm32:
+    return *(TheTargetCodeGenInfo = new LM32TargetCodeGenInfo(Types));
 
   case llvm::Triple::msp430:
     return *(TheTargetCodeGenInfo = new MSP430TargetCodeGenInfo(Types));
