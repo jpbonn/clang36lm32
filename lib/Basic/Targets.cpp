@@ -1711,11 +1711,11 @@ namespace {
 // LM32 abstract base class
 class LM32TargetInfo : public TargetInfo {
   static const char * const GCCRegNames[];
-  static const TargetInfo::GCCRegAlias GCCRegAliases[];
+  //static const TargetInfo::GCCRegAlias GCCRegAliases[];
   std::vector<llvm::StringRef> AvailableFeatures;
 
 public:
-  LM32TargetInfo(const std::string& triple) : TargetInfo(triple) {
+  LM32TargetInfo(const llvm::Triple &Triple) : TargetInfo(Triple) {
 //    PointerWidth = PointerAlign = 32;
 //    LongWidth = LongAlign = 32;
     LongLongWidth = 64;
@@ -1727,8 +1727,8 @@ public:
 //    IntMaxType = SignedLong;
 //    UIntMaxType = UnsignedLong;
 //    Int64Type = SignedLongLong;
-    // This must match llvm/lib/Target/LM32/LM32TargetMachine.cpp
-DescriptionString = "E-p:32:32:32-i8:8:32-i16:16:32-i32:32:32-i64:32:32-f32:32:32-f64:32:32-a0:8:32-S32-s0:32:32-n32-v64:32:32-v128:32:32";
+    // This must match llvm/lib/Target/LM32/LM32Subtarget.cpp
+DescriptionString = "E-m:e-p:32:32:32-i8:8:32-i16:16:32-i32:32:32-i64:32:32-f32:32:32-f64:32:32-a0:8:32-S32-s0:32:32-n32-v64:32:32-v128:32:32";
 
     // Define available target features
     // These must be defined in sorted order!      
@@ -1749,8 +1749,8 @@ DescriptionString = "E-p:32:32:32-i8:8:32-i16:16:32-i32:32:32-i64:32:32-f32:32:3
   virtual void getTargetDefines(const LangOptions &Opts,
                                 MacroBuilder &Builder) const;
 
-  virtual const char *getVAListDeclaration() const {
-    return "typedef char* __builtin_va_list;";
+  virtual BuiltinVaListKind getBuiltinVaListKind() const {
+    return TargetInfo::CharPtrBuiltinVaList;
   }
   virtual const char *getTargetPrefix() const {
     return "lm32";
@@ -1779,18 +1779,14 @@ DescriptionString = "E-p:32:32:32-i8:8:32-i16:16:32-i32:32:32-i64:32:32-f32:32:3
     return "";
   }
 
-  bool setFeatureEnabled(llvm::StringMap<bool> &Features,
-                                           const std::string &Name,
-                                           bool Enabled) const {
+  void setFeatureEnabled(llvm::StringMap<bool> &Features,
+                         StringRef Name,
+                         bool Enabled) const {
     if(std::binary_search(AvailableFeatures.begin(), AvailableFeatures.end(),
                           Name)) {
       Features[Name] = Enabled;
-      return true;
-    } else {
-      return false;
     }
   }
-
 };
 
 /// LM32TargetInfo::getTargetDefines - Return a set of the LM32-specific
@@ -1798,11 +1794,9 @@ DescriptionString = "E-p:32:32:32-i8:8:32-i16:16:32-i32:32:32-i64:32:32-f32:32:3
 void LM32TargetInfo::getTargetDefines(const LangOptions &Opts,
                                      MacroBuilder &Builder) const {
   // Target identification.
-  Builder.defineMacro("__mico32__");
   Builder.defineMacro("__lm32__");
-  Builder.defineMacro("_ARCH_MICO32");
-  Builder.defineMacro("__MICO32__");
   Builder.defineMacro("__LM32__");
+  Builder.defineMacro("_ARCH_LM32");
 
   // Target properties.
   Builder.defineMacro("_BIG_ENDIAN");
