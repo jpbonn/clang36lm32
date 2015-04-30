@@ -1781,6 +1781,9 @@ unsigned ASTContext::getPreferredTypeAlign(const Type *T) const {
   if (Target->getTriple().getArch() == llvm::Triple::xcore)
     return ABIAlign;  // Never overalign on XCore.
 
+  if (Target->getTriple().getArch() == llvm::Triple::lm32)
+    return ABIAlign;  // Never overalign on LM32.
+
   // Double and long long should be naturally aligned if possible.
   T = T->getBaseElementTypeUnsafe();
   if (const ComplexType *CT = T->getAs<ComplexType>())
