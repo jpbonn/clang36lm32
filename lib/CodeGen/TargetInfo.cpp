@@ -5554,82 +5554,72 @@ class LM32ABIInfo : public ABIInfo {
 public:
   LM32ABIInfo(CodeGenTypes &CGT) : ABIInfo(CGT) {}
 
-  bool isPromotableIntegerType(QualType Ty) const;
-
+private:
   ABIArgInfo classifyReturnType(QualType RetTy) const;
   ABIArgInfo classifyArgumentType(QualType RetTy) const;
-  virtual void computeInfo(CGFunctionInfo &FI) const;
+  virtual void computeInfo(CGFunctionInfo &FI) const override;
   virtual llvm::Value *EmitVAArg(llvm::Value *VAListAddr, QualType Ty,
-                                 CodeGenFunction &CGF) const;
+                                 CodeGenFunction &CGF) const override;
 };
 
 class LM32TargetCodeGenInfo : public TargetCodeGenInfo {
 public:
   LM32TargetCodeGenInfo(CodeGenTypes &CGT)
     : TargetCodeGenInfo(new LM32ABIInfo(CGT)) {}
-  void SetTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
-                           CodeGen::CodeGenModule &M) const override;
 };
 
 }
 
-// Copied from MBlaze
-bool LM32ABIInfo::isPromotableIntegerType(QualType Ty) const {
-  // Extend all 8 and 16 bit quantities.
-  if (const BuiltinType *BT = Ty->getAs<BuiltinType>())
-    switch (BT->getKind()) {
-    case BuiltinType::Bool:
-    case BuiltinType::Char_S:
-    case BuiltinType::Char_U:
-    case BuiltinType::SChar:
-    case BuiltinType::UChar:
-    case BuiltinType::Short:
-    case BuiltinType::UShort:
-      return true;
-    default:
-      return false;
-    }
-  return false;
-}
-
+// Copied from Hexagon
+// FIXME: review this with GCC.
 void LM32ABIInfo::computeInfo(CGFunctionInfo &FI) const {
-  FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
-  for (CGFunctionInfo::arg_iterator it = FI.arg_begin(), ie = FI.arg_end();
-       it != ie; ++it)
-    it->info = classifyArgumentType(it->type);
+  if (!getCXXABI().classifyReturnType(FI))
+    FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
+  for (auto &I : FI.arguments())
+    I.info = classifyArgumentType(I.type);
 }
 
-// Copied from MIPS
+// Copied from Hexagon
+// FIXME: review this with GCC.
 ABIArgInfo LM32ABIInfo::classifyArgumentType(QualType Ty) const {
-  if (isAggregateTypeForABI(Ty)) {
-    // Ignore empty aggregates.
-    if (getContext().getTypeSize(Ty) == 0)
-      return ABIArgInfo::getIgnore();
+  if (!isAggregateTypeForABI(Ty)) {
+    // Treat an enum type as its underlying type.
+    if (const EnumType *EnumTy = Ty->getAs<EnumType>())
+      Ty = EnumTy->getDecl()->getIntegerType();
 
-    // Records with non trivial destructors/constructors should not be passed
-    // by value.
-    if (isRecordWithNonTrivialDestructorOrCopyConstructor(Ty))
-      return ABIArgInfo::getIndirect(0, /*ByVal=*/false);
-
-    return ABIArgInfo::getIndirect(0);
+    return (Ty->isPromotableIntegerType() ?
+            ABIArgInfo::getExtend() : ABIArgInfo::getDirect());
   }
 
-  // Treat an enum type as its underlying type.
-  if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-    Ty = EnumTy->getDecl()->getIntegerType();
+  // Ignore empty records.
+  if (isEmptyRecord(getContext(), Ty, true))
+    return ABIArgInfo::getIgnore();
 
-  return (isPromotableIntegerType(Ty) ?
-          ABIArgInfo::getExtend() : ABIArgInfo::getDirect());
+  if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
+    return ABIArgInfo::getIndirect(0, RAA == CGCXXABI::RAA_DirectInMemory);
+
+  uint64_t Size = getContext().getTypeSize(Ty);
+  if (Size > 32)
+    return ABIArgInfo::getIndirect(0, /*ByVal=*/true);
+  else
+    return ABIArgInfo::getDirect(llvm::Type::getInt32Ty(getVMContext()));
 }
 
-// Copied from MIPS
+
+// Similar to Hexagon
 ABIArgInfo LM32ABIInfo::classifyReturnType(QualType RetTy) const {
   if (RetTy->isVoidType())
     return ABIArgInfo::getIgnore();
 
   if (isAggregateTypeForABI(RetTy)) {
-    // FIXME:  Do we want to do a direct return of aggregates of < 8 bytes.
-    return ABIArgInfo::getIndirect(0);
+    // Aggregates <= 4 bytes are returned in r0; other aggregates
+    // are returned indirectly.
+    uint64_t Size = getContext().getTypeSize(RetTy);
+    if (Size <= 32) {
+      return ABIArgInfo::getDirect(llvm::Type::getInt32Ty(getVMContext()));
+    }
+
+    return ABIArgInfo::getIndirect(0, /*ByVal=*/true);
   }
 
   // Treat an enum type as its underlying type.
@@ -5641,14 +5631,9 @@ ABIArgInfo LM32ABIInfo::classifyReturnType(QualType RetTy) const {
 }
 
 
-void LM32TargetCodeGenInfo::SetTargetAttributes(const Decl *D,
-                                                  llvm::GlobalValue *GV,
-                                             CodeGen::CodeGenModule &M) const {
-}
-
 llvm::Value *LM32ABIInfo::EmitVAArg(llvm::Value *VAListAddr, QualType Ty,
                                    CodeGenFunction &CFG) const {
-  return 0;
+  return nullptr;
 }
 
 
