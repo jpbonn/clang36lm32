@@ -35,6 +35,7 @@ namespace visualstudio {
 }
 
 using llvm::opt::ArgStringList;
+using llvm::opt::ArgList;
 
   /// \brief Clang compiler tool.
   class LLVM_LIBRARY_VISIBILITY Clang : public Tool {
